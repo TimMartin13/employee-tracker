@@ -1,8 +1,29 @@
 const inquirer = require('inquirer');
 const fs = require('fs');
+const mysql = require("mysql");
 // const mainMenuQuestions = require('./lib/questions.js');
 // console.log(questions);
-const { allowedNodeEnvironmentFlags, exit } = require('process');
+// const { allowedNodeEnvironmentFlags, exit } = require('process');
+
+var connection = mysql.createConnection({
+    host: "localhost",
+  
+    // Your port; if not 3306
+    port: 3306,
+  
+    // Your username
+    user: "root",
+  
+    // Your password
+    password: "root",
+    database: "employees_db"
+});
+
+connection.connect(function(err) {
+    if (err) throw err;
+    console.log("connected as id " + connection.threadId);
+    mainMenu();
+});
 
 const mainMenuQuestions = [
     {
@@ -29,8 +50,7 @@ const mainMenuQuestions = [
 ];
 
 function mainMenu() {
-    console.log("Print employee log here");
-    
+       
     inquirer
         .prompt(mainMenuQuestions)
         .then(({ selection }) => {
@@ -53,6 +73,7 @@ function mainMenu() {
                 default: console.log("Default"); mainMenu(); break;
             }
         });
+        
 }
 
 function addEmployee() {
@@ -207,43 +228,101 @@ function removeRole() {
 }
 
 function updateRole() {
-    console.log("Updating role");
-    mainMenu();
+    const addUpdateQuestions = [
+        {
+            type: 'list',
+            message: "Which employee would you like to update?",
+            name: 'employeeName',
+            choices: [
+                'Need a query of employee names here'
+            ]
+        },
+        {
+            type: 'list',
+            message: "Which role would you like?",
+            name: 'roleName',
+            choices: [
+                'Need a query of roles here'
+            ]
+        }
+    ];
+    inquirer
+        .prompt(addUpdateQuestions)
+        .then(( { employeeName, roleName }) => {
+            console.log(`Update ${ employeeName } to ${ roleName } in SQL`);
+            mainMenu();
+    });
 }
 
 function updateManager() {
-    console.log("Updating manager");
-    mainMenu();
+    const addUpdateQuestions = [
+        {
+            type: 'list',
+            message: "Which employee would you like to update?",
+            name: 'employeeName',
+            choices: [
+                'Need a query of employee names here'
+            ]
+        },
+        {
+            type: 'list',
+            message: "Which manager would you like?",
+            name: 'managerName',
+            choices: [
+                'Need a query of employees here'
+            ]
+        }
+    ];
+    inquirer
+        .prompt(addUpdateQuestions)
+        .then(( { employeeName, managerName }) => {
+            console.log(`Update ${ employeeName } to ${ managerName } in SQL`);
+            mainMenu();
+    });
 }
 
 function viewEmployees() {
-    console.log("Viewing employees");
-    mainMenu();
+    queryURL = `SELECT * FROM employee`;
+    console.log(queryURL);
+    connection.query(queryURL, function(err, res) {
+        if (err) throw err;
+        console.table(res);
+        mainMenu();
+    });
 }
 
 function viewEmployeesByDept() {
-    console.log("Viewing employees by dept");
+    console.log("SELECT * FROM employees WHERE role_id = dept");
     mainMenu();
 }
 
 function viewEmployeesByManager() {
-    console.log("Viewing employees by manager");
+    console.log("SELECT * FROM employees WHERE manager = manager_id");
     mainMenu();
 }              
  
 function viewDept() {
-    console.log("Viewing departments");
-    mainMenu();
+    queryURL = `SELECT * FROM department`;
+    console.log(queryURL);
+    connection.query(queryURL, function(err, res) {
+        if (err) throw err;
+        console.table(res);
+        mainMenu();
+    });
 }
 
 function viewRoles() {
-    console.log("Viewing roles");
-    mainMenu();
+    queryURL = `SELECT * FROM role`;
+    console.log(queryURL);
+    connection.query(queryURL, function(err, res) {
+        if (err) throw err;
+        console.table(res);
+        mainMenu();
+    });
 }
    
 function exitProgram() {
-    console.log("exiting");
-    exit();
+    connection.end();
 }
                 
-mainMenu();
+// mainMenu();
