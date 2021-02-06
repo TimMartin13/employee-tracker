@@ -30,16 +30,16 @@ function mainMenu() {
         .then(({ selection }) => {
             console.log(selection);
             switch(selection) {
-                case 'Add employee':                        addEmployee();              break;
+                case 'Add employee':                        addEmployee();  break;
                 case 'Add department':                      addDept();                  break;
-                case 'Add role':                            addRole();                  break;
+                case 'Add role':                            getDepartmentList("addRole");                  break;
                 case 'Remove employee':                     removeEmployee();           break;
-                case 'Remove department':                   removeDept();               break;
+                case 'Remove department':                   getDepartmentList("removeDept");               break;
                 case 'Remove role':                         removeRole();               break;
                 case 'Update employee role':                updateRole();               break;
                 case 'Update employee manager':             updateManager();            break;
                 case 'View all employees':                  viewEmployees();            break;
-                case 'View all employees by Department':    viewEmployeesByDept();      break;
+                case 'View all employees by Department':    getDepartmentList("viewEmployees");      break;
                 case 'View all employees by Manager':       viewEmployeesByManager();   break;
                 case 'View all departments':                viewDept();                 break;
                 case 'View all roles':                      viewRoles();                break;
@@ -91,7 +91,7 @@ function addDept() {
     });
 }
 
-function addRole() {
+function getDepartmentList(reason) {
     const departments = [];
     queryURL = `SELECT dept_name, id FROM department`;
 
@@ -106,11 +106,15 @@ function addRole() {
             departments.push(department);
         };
         
-        insertRole(departments);
+        switch(reason) {
+            case 'addRole': addRole(departments); break;
+            case 'removeDept': removeDept(departments); break;
+            case 'viewEmployees': viewEmployeesByDept(departments); break;
+        }
     });
 }
 
-function insertRole(departmentArray) {
+function addRole(departmentArray) {
     
     const addRoleQ = [
         {
@@ -167,15 +171,13 @@ function removeEmployee() {
     });  
 }
 
-function removeDept() {
+function removeDept(departmentArray) {
     const addRemoveDeptQuestions = [
         {
             type: 'list',
             message: "Which department would you like to remove?",
-            name: 'departmentName',
-            choices: [
-                'Need a query of department names here'
-            ]
+            name: 'departmentID',
+            choices: departmentArray
         },
         {
             type: 'confirm',
@@ -185,9 +187,14 @@ function removeDept() {
     ];
     inquirer
         .prompt(addRemoveDeptQuestions)
-        .then(( { departmentName, remove }) => {
-            console.log(`Remove ${ departmentName } from the department table. ${ remove } I'm sure.`);
-            mainMenu();
+        .then(( { departmentID, remove }) => {
+            if(remove) {
+                queryURL = `DELETE FROM department WHERE ${ departmentID } = department.id`
+            }
+            connection.query(queryURL, function(err, res, field) {
+                if (err) throw err;
+                mainMenu();
+            });
     }); 
 }
 
@@ -279,9 +286,30 @@ function viewEmployees() {
     });
 }
 
-function viewEmployeesByDept() {
-    console.log("SELECT * FROM employees WHERE role_id = dept");
-    mainMenu();
+function viewEmployeesByDept(departmentArray) {
+    const addRemoveDeptQuestions = [
+        {
+            type: 'list',
+            message: "Which department would you like to view?",
+            name: 'departmentID',
+            choices: departmentArray
+        }
+    ];
+    inquirer
+        .prompt(addRemoveDeptQuestions)
+        .then(( { departmentID }) => {
+            queryURL = `SELECT employee.first_name, employee.last_name, department.dept_name 
+            FROM employee INNER JOIN role
+            ON (employee.role_id = role.id)
+            INNER JOIN department
+            ON (role.department_id = department.id)
+            WHERE ( ${ departmentID } = department.id);`
+            connection.query(queryURL, function(err, res, field) {
+                if (err) throw err;
+                console.table(res);
+                mainMenu();
+            });
+    }); 
 }
 
 function viewEmployeesByManager() {
