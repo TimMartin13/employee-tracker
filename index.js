@@ -1,9 +1,7 @@
 const inquirer = require('inquirer');
 const fs = require('fs');
 const mysql = require("mysql");
-// const mainMenuQuestions = require('./lib/questions.js');
-// console.log(questions);
-// const { allowedNodeEnvironmentFlags, exit } = require('process');
+const questions = require('./lib/questions.js');
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -25,52 +23,28 @@ connection.connect(function(err) {
     mainMenu();
 });
 
-const mainMenuQuestions = [
-    {
-        type: 'list',
-        message: 'What would you like to do?',
-        name: 'selection',
-        choices: [
-            'Add employee',
-            'Add department',
-            'Add role',
-            'Remove employee',
-            'Remove department',
-            'Remove role',
-            'Update employee role',
-            'Update employee manager',
-            'View all employees',
-            'View all employees by Department',
-            'View all employees by Manager',
-            'View all departments',
-            'View all roles',
-            'Exit'   
-        ]
-    }
-];
-
 function mainMenu() {
        
     inquirer
-        .prompt(mainMenuQuestions)
+        .prompt(questions.mainMenuQ)
         .then(({ selection }) => {
             console.log(selection);
             switch(selection) {
-                case 'Add employee':  addEmployee(); break;
-                case 'Add department':  addDept(); break;
-                case 'Add role':        addRole(); break;
-                case 'Remove employee': removeEmployee(); break;
-                case 'Remove department': removeDept(); break;
-                case 'Remove role': removeRole(); break;
-                case 'Update employee role': updateRole(); break;
-                case 'Update employee manager': updateManager(); break;
-                case 'View all employees': viewEmployees(); break;
-                case 'View all employees by Department': viewEmployeesByDept(); break;
-                case 'View all employees by Manager': viewEmployeesByManager(); break;
-                case 'View all departments': viewDept(); break;
-                case 'View all roles': viewRoles(); break;
-                case 'Exit': exitProgram(); break;
-                default: console.log("Default"); mainMenu(); break;
+                case 'Add employee':                        addEmployee();              break;
+                case 'Add department':                      addDept();                  break;
+                case 'Add role':                            addRole();                  break;
+                case 'Remove employee':                     removeEmployee();           break;
+                case 'Remove department':                   removeDept();               break;
+                case 'Remove role':                         removeRole();               break;
+                case 'Update employee role':                updateRole();               break;
+                case 'Update employee manager':             updateManager();            break;
+                case 'View all employees':                  viewEmployees();            break;
+                case 'View all employees by Department':    viewEmployeesByDept();      break;
+                case 'View all employees by Manager':       viewEmployeesByManager();   break;
+                case 'View all departments':                viewDept();                 break;
+                case 'View all roles':                      viewRoles();                break;
+                case 'Exit':                                exitProgram();              break;
+                default: console.log("Default");            mainMenu();                 break;
             }
         });
         
@@ -79,63 +53,66 @@ function mainMenu() {
 function addEmployee() {
     console.log("Adding employee");
 
-    console.log("Needs to be populated by MySQL");
-    
-    const addEmployeeQ = [
-        {
-            type: 'input',
-            message: "First name?",
-            name: 'firstName',
-        },
-        {
-            type: 'input',
-            message: "Last name?",
-            name: 'lastName',
-        },
-        {
-            type: 'list',
-            message: "Title?",
-            name: 'employeeRole',
-            choices: [
-                'MySQL role choices'
-            ]
-        },
-        {
-            type: 'list',
-            message: "Manager?",
-            name: 'employeeManager',
-            choices: [
-                "MySQL manager choices"
-            ]
-        }
-    ];
+    // queryURL = `SELECT employee (first_name, last_name, role_id, manager_id)
+    //         VALUES ("${ firstName }", ${ lastName }, ${ employeeRole }, ${ employeeManager });`;
+    //         console.log(queryURL);
+    //         connection.query(queryURL, function(err, res, field) {
+    //         if (err) throw err;
+    //         console.table(res);
+    //         mainMenu();
+    //         });
 
     inquirer
-        .prompt(addEmployeeQ)
+        .prompt(questions.addEmployeeQ)
         .then(( { firstName, lastName, employeeRole, employeeManager }) => {
             console.log(`Put in db: ${ firstName }, ${ lastName }, ${ employeeRole }, ${ employeeManager }`);
+            queryURL = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+            VALUES ("${ firstName }", ${ lastName }, ${ employeeRole }, ${ employeeManager });`;
+            console.log(queryURL);
+            connection.query(queryURL, function(err, res, field) {
+            if (err) throw err;
+            console.table(res);
             mainMenu();
+            });
+            
         });
 }
 
 function addDept() {
-    const addDeptQuestions = [
-        {
-            type: 'input',
-            message: "Department name?",
-            name: 'departmentName'
-        }
-    ];
     inquirer
-        .prompt(addDeptQuestions)
+        .prompt(questions.addDeptQ)
         .then(( { departmentName }) => {
-            console.log(`Add ${ departmentName } to department table in SQL`);
+            queryURL = `INSERT INTO department (dept_name)
+            VALUES ("${ departmentName }");`;
+            connection.query(queryURL, function(err) {
+            if (err) throw err;
             mainMenu();
+            });
     });
 }
 
 function addRole() {
-    const addRoleQuestions = [
+    const departments = [];
+    queryURL = `SELECT dept_name, id FROM department`;
+
+    connection.query(queryURL, function(err, res, field) {
+        if (err) throw err;
+        
+        for (let i = 0; i < res.length; i++) {
+            let department = {
+                name: res[i].dept_name,
+                value: res[i].id
+            };
+            departments.push(department);
+        };
+        
+        insertRole(departments);
+    });
+}
+
+function insertRole(departmentArray) {
+    
+    const addRoleQ = [
         {
             type: 'input',
             message: "Title?",
@@ -145,13 +122,24 @@ function addRole() {
             type: 'number',
             message: "Salary?",
             name: 'salary'
-        }
+        },
+        {
+            type: 'list',
+            message: "Which department would you like this role in?",
+            name: 'departmentChoice',
+            choices: departmentArray
+        },
     ];
+       
     inquirer
-        .prompt(addRoleQuestions)
-        .then(( { roleName, salary }) => {
-            console.log(`Add ${ roleName }, salary ${ salary } to role table in SQL`);
-            mainMenu();
+        .prompt(addRoleQ)
+        .then(( { roleName, salary, departmentChoice }) => {
+            queryURL = `INSERT INTO role (title, salary, department_id)
+            VALUES ('${ roleName }', ${ salary }, ${ departmentChoice } )`;
+            connection.query(queryURL, function(err, res, field) {
+                if (err) throw err;
+                mainMenu();
+            });
     });  
 }
 
@@ -298,12 +286,19 @@ function viewEmployeesByDept() {
 
 function viewEmployeesByManager() {
     console.log("SELECT * FROM employees WHERE manager = manager_id");
+    queryURL = `SELECT * FROM employee`;
+    console.log(queryURL);
+    connection.query(queryURL, function(err, res) {
+        if (err) throw err;
+        console.table(res);
+        mainMenu();
+    });
+
     mainMenu();
 }              
  
 function viewDept() {
     queryURL = `SELECT * FROM department`;
-    console.log(queryURL);
     connection.query(queryURL, function(err, res) {
         if (err) throw err;
         console.table(res);
@@ -313,7 +308,6 @@ function viewDept() {
 
 function viewRoles() {
     queryURL = `SELECT * FROM role`;
-    console.log(queryURL);
     connection.query(queryURL, function(err, res) {
         if (err) throw err;
         console.table(res);
