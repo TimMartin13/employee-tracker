@@ -104,3 +104,8 @@ LEFT JOIN department
 ON role.department_id = department.id 
 LEFT JOIN employee manager 
 ON manager.id = employee.manager_id;
+
+SELECT department.dept_name, SUM(role.salary) AS salary 
+FROM role LEFT JOIN department
+ON role.department_id = department.id
+WHERE role.department_id = 2;

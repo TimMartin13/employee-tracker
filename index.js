@@ -454,7 +454,6 @@ function viewEmployeesByManager(employeeArr) {
             choices: employeeArr
         }
     ];
-    console.log("SELECT * FROM employees WHERE manager = manager_id");
     inquirer
         .prompt(viewManagerQuestions)
         .then(( { managerID }) => {
